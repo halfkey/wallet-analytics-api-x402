@@ -36,7 +36,6 @@
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,
-    "verbatimModuleSyntax": true,
 
     // Skip Lib Check (for faster compilation)
     "skipLibCheck": true,

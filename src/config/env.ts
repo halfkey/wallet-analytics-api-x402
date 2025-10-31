@@ -18,8 +18,17 @@ const envSchema = z.object({
 
   // Payment
   PAYMENT_MODE: z.enum(['mock', 'test', 'payai']).default('mock'),
-  PAYAI_FACILITATOR_URL: z.string().url().optional(),
-  PAYAI_PUBLIC_KEY: z.string().optional(),
+  PAYAI_FACILITATOR_URL: z
+    .string()
+    .url()
+    .optional()
+    .or(z.literal(''))
+    .transform((val) => (val === '' ? undefined : val)),
+  PAYAI_PUBLIC_KEY: z
+    .string()
+    .optional()
+    .or(z.literal(''))
+    .transform((val) => (val === '' ? undefined : val)),
 
   // Redis
   REDIS_URL: z.string().url().optional(),
