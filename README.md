@@ -27,7 +27,9 @@ x402 is a revolutionary payment protocol that enables micropayments for API acce
 
 ### Production Features
 - **High Performance**: Sub-100ms response times with Redis caching
-- **Rate Limiting**: IP-based and wallet-based rate limiting
+- **Smart Rate Limiting**: Per-route rate limiting (analytics endpoints only, RPC proxy exempt)
+- **Secure RPC Proxy**: Frontend access to Helius RPC without exposing API keys
+- **Enhanced Error Handling**: Clear user feedback for payment failures and insufficient balance
 - **Comprehensive Tests**: 35+ passing tests with 80%+ coverage
 - **Docker Support**: Production-ready containerization
 - **Health Monitoring**: Health checks and graceful shutdown
@@ -145,10 +147,12 @@ scripts/
 ## Security
 
 - **Zero Trust Architecture**: Every request requires valid payment proof
-- **Rate Limiting**: IP-based (before payment) and wallet-based (after payment)
+- **Smart Rate Limiting**: Per-route rate limiting applied only to paid analytics endpoints; RPC proxy exempt to enable transaction creation
+- **Secure RPC Proxy**: Backend proxies Solana RPC calls, keeping Helius API key server-side and never exposed to browsers
 - **Input Validation**: All inputs validated with Zod schemas
 - **Secure Headers**: Helmet.js for HTTP security
 - **No PII Collection**: Minimal data retention, GDPR compliant
+- **Replay Attack Prevention**: Transaction memos tracked to prevent reuse
 
 ## API Endpoints
 
@@ -157,6 +161,16 @@ scripts/
 GET /health
 No payment required
 ```
+
+### RPC Proxy (New - Security Feature)
+```
+POST /api/v1/rpc
+No payment required
+Purpose: Proxy Solana RPC calls to keep Helius API key secure
+Allowed methods: getAccountInfo, getLatestBlockhash, sendTransaction, getSignatureStatuses
+```
+
+This endpoint allows frontend applications to make Solana RPC calls through the backend, keeping the Helius API key secure and never exposing it to browsers. This is critical for the x402 payment flow, as users need to create and send transactions without requiring their own RPC credentials.
 
 ### Wallet Overview
 ```
@@ -246,12 +260,14 @@ Clients include payment proof in the `X-PAYMENT` header (Base64-encoded JSON):
 
 The server verifies payments by:
 
-1. **Signature Validation**: Check transaction signature exists on Solana
+1. **Signature Validation**: Check transaction signature exists on Solana (with 10 retries over 20 seconds to handle blockchain indexing delays)
 2. **Amount Verification**: Confirm USDC amount matches price
 3. **Recipient Check**: Verify payment sent to correct merchant wallet
 4. **Memo Matching**: Ensure memo matches payment challenge
 5. **Timestamp Check**: Transaction must be recent (< 5 minutes)
 6. **Replay Prevention**: Check transaction hasn't been used before
+
+**Note**: The verification process includes automatic retries with exponential backoff to handle Solana's transaction indexing delays. Most transactions verify within 1-2 seconds, but the system will wait up to 20 seconds for slower confirmation times.
 
 ### Code Structure
 

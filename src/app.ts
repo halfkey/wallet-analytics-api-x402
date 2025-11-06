@@ -53,15 +53,12 @@ export async function createApp(): Promise<FastifyInstance> {
 
   // Rate limiting - protect against abuse
   await app.register(rateLimit, {
+    global: false, // Don't apply globally, we'll enable per-route
     max: config.rateLimit.maxRequestsBeforePayment,
     timeWindow: config.rateLimit.windowMs,
     cache: 10000, // Cache size for storing rate limit data
     allowList: ['127.0.0.1'], // Allow localhost in development
     skipOnError: false, // Don't skip rate limiting on errors
-    skip: (request) => {
-      // Skip rate limiting for RPC proxy (it's a utility endpoint for paid features)
-      return request.url === '/api/v1/rpc';
-    },
     keyGenerator: (request) => {
       // Use IP address for rate limiting
       return request.ip || 'unknown';
@@ -223,7 +220,10 @@ export async function createApp(): Promise<FastifyInstance> {
   // Wallet overview endpoint
   app.get(
     '/api/v1/wallet/:address/overview',
-    { preHandler: validateWalletAddress },
+    {
+      preHandler: validateWalletAddress,
+      config: { rateLimit: { max: config.rateLimit.maxRequestsBeforePayment, timeWindow: config.rateLimit.windowMs } }
+    },
     async (request, reply) => {
       const { address } = request.params as { address: string };
 
@@ -251,7 +251,10 @@ export async function createApp(): Promise<FastifyInstance> {
   // Wallet portfolio endpoint
   app.get(
     '/api/v1/wallet/:address/portfolio',
-    { preHandler: validateWalletAddress },
+    {
+      preHandler: validateWalletAddress,
+      config: { rateLimit: { max: config.rateLimit.maxRequestsBeforePayment, timeWindow: config.rateLimit.windowMs } }
+    },
     async (request, reply) => {
       const { address } = request.params as { address: string };
 
@@ -281,7 +284,10 @@ export async function createApp(): Promise<FastifyInstance> {
    */
   app.get(
     '/api/v1/wallet/:address/activity',
-    { preHandler: validateWalletAddress },
+    {
+      preHandler: validateWalletAddress,
+      config: { rateLimit: { max: config.rateLimit.maxRequestsBeforePayment, timeWindow: config.rateLimit.windowMs } }
+    },
     async (request, reply) => {
       const { address } = request.params as { address: string };
 
@@ -311,7 +317,10 @@ export async function createApp(): Promise<FastifyInstance> {
    */
   app.get(
     '/api/v1/wallet/:address/risk',
-    { preHandler: validateWalletAddress },
+    {
+      preHandler: validateWalletAddress,
+      config: { rateLimit: { max: config.rateLimit.maxRequestsBeforePayment, timeWindow: config.rateLimit.windowMs } }
+    },
     async (request, reply) => {
       const { address } = request.params as { address: string };
 

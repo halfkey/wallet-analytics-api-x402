@@ -77,8 +77,8 @@ export async function verifyOnChainPayment(
     // Fetch transaction from blockchain with retries
     // Solana nodes need time to index transactions, so we retry a few times
     let transaction: ParsedTransactionWithMeta | null = null;
-    const maxRetries = 5;
-    const retryDelay = 1000; // 1 second between retries
+    const maxRetries = 10;
+    const retryDelay = 2000; // 2 seconds between retries
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
@@ -116,7 +116,7 @@ export async function verifyOnChainPayment(
     if (!transaction) {
       return {
         isValid: false,
-        reason: `Transaction not found on blockchain after ${maxRetries} attempts (${maxRetries} seconds)`,
+        reason: `Transaction not found on blockchain after ${maxRetries} attempts (${(maxRetries * retryDelay) / 1000} seconds)`,
       };
     }
 

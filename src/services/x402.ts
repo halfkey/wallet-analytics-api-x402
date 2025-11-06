@@ -15,6 +15,7 @@ export interface X402PaymentRequirement {
   payTo: string;
   asset: string; // USDC SPL token address
   maxTimeoutSeconds: number;
+  memo: string; // Unique memo to prevent replay attacks
 }
 
 /** x402 payment required response */
@@ -53,6 +54,17 @@ export function usdcToAtomicUnits(usdcAmount: number): string {
 }
 
 /**
+ * Generate unique payment memo to prevent replay attacks
+ * Format: pay_<timestamp>_<random>
+ * @returns Unique memo string
+ */
+export function generatePaymentMemo(): string {
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).substring(2, 15);
+  return `pay_${timestamp}_${random}`;
+}
+
+/**
  * Create x402 payment requirement
  * @param resource The requested resource path
  * @param usdcAmount Amount in USDC
@@ -70,6 +82,7 @@ export function createPaymentRequirement(
     payTo: config.payment.recipientAddress || '',
     asset: USDC_MINT,
     maxTimeoutSeconds: 300, // 5 minutes
+    memo: generatePaymentMemo(), // Unique memo for each payment challenge
   };
 }
 
