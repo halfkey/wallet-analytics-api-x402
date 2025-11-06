@@ -44,6 +44,8 @@ export async function createApp(): Promise<FastifyInstance> {
   await app.register(cors, {
     origin: config.server.isDevelopment
       ? '*'
+      : config.security.corsOrigins?.[0] === '*'
+      ? '*'
       : config.security.corsOrigins || false,
     methods: ['GET', 'POST', 'OPTIONS'],
     credentials: true,

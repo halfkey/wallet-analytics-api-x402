@@ -17,7 +17,7 @@ const envSchema = z.object({
   HELIUS_RPC_URL_DEVNET: z.string().url().optional(),
 
   // Payment
-  PAYMENT_MODE: z.enum(['mock', 'test', 'payai']).default('mock'),
+  PAYMENT_MODE: z.enum(['mock', 'test', 'payai', 'onchain']).default('mock'),
   PAYAI_FACILITATOR_URL: z
     .string()
     .url()

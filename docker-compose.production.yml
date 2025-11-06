@@ -6,6 +6,8 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: wallet-analytics-api
+    env_file:
+      - .env.production
     ports:
       - "3000:3000"
     environment:
@@ -18,10 +20,8 @@ services:
       - SOLANA_NETWORK=${SOLANA_NETWORK:-mainnet-beta}
       - HELIUS_RPC_URL_MAINNET=${HELIUS_RPC_URL_MAINNET}
 
-      # Payment
-      - PAYMENT_MODE=${PAYMENT_MODE:-payai}
-      - PAYAI_FACILITATOR_URL=${PAYAI_FACILITATOR_URL}
-      - PAYAI_PUBLIC_KEY=${PAYAI_PUBLIC_KEY}
+      # Payment (loaded from .env.production via env_file)
+      # PAYMENT_MODE is set in .env.production
 
       # Database
       - DATABASE_URL=${DATABASE_URL}
@@ -42,12 +42,9 @@ services:
       retries: 3
       start_period: 40s
 
-    depends_on:
-      db:
-        condition: service_healthy
-
-  # PostgreSQL database
-  db:
+  # PostgreSQL database (not used - using Neon external DB instead)
+  # Kept for reference but not started
+  db_disabled:
     image: postgres:16-alpine
     container_name: wallet-analytics-db
     environment:
