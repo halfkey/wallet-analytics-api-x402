@@ -51,6 +51,11 @@ export function requiresPayment(path: string): boolean {
     return false;
   }
 
+  // RPC proxy is free (users pay for analytics, not RPC calls)
+  if (path === '/api/v1/rpc') {
+    return false;
+  }
+
   // All /api/* endpoints require payment
   return path.startsWith('/api/');
 }

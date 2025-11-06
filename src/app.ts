@@ -182,7 +182,16 @@ export async function createApp(): Promise<FastifyInstance> {
       }
 
       // Forward the request to Helius RPC
-      const response = await fetch(config.solana.rpcUrl, {
+      const rpcUrl = config.solana.rpcUrl;
+      if (!rpcUrl) {
+        return reply.code(500).send({
+          error: 'Internal Server Error',
+          message: 'RPC URL not configured',
+          statusCode: 500,
+        });
+      }
+
+      const response = await fetch(rpcUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
