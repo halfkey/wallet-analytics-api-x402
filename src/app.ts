@@ -159,6 +159,54 @@ export async function createApp(): Promise<FastifyInstance> {
     });
   });
 
+  // RPC proxy endpoint (no payment required, for transaction preparation only)
+  // This allows frontend to use Helius RPC without exposing API key
+  app.post('/api/v1/rpc', async (request, reply) => {
+    try {
+      const body = request.body as { method: string; params?: any[] };
+
+      // Only allow specific safe RPC methods needed for transaction creation
+      const allowedMethods = [
+        'getAccountInfo',
+        'getLatestBlockhash',
+        'sendTransaction',
+        'confirmTransaction',
+      ];
+
+      if (!allowedMethods.includes(body.method)) {
+        return reply.code(403).send({
+          error: 'Forbidden',
+          message: `RPC method '${body.method}' is not allowed`,
+          statusCode: 403,
+        });
+      }
+
+      // Forward the request to Helius RPC
+      const response = await fetch(config.solana.rpcUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: body.method,
+          params: body.params || [],
+        }),
+      });
+
+      const data = await response.json();
+      return reply.send(data);
+    } catch (error) {
+      app.log.error({ error }, 'RPC proxy error');
+      return reply.code(500).send({
+        error: 'Internal Server Error',
+        message: 'Failed to proxy RPC request',
+        statusCode: 500,
+      });
+    }
+  });
+
   // Wallet overview endpoint
   app.get(
     '/api/v1/wallet/:address/overview',
