@@ -1,0 +1,8 @@
+# Add this to ~/.ssh/config for easier access:
+
+Host vultr-wallet-api
+    HostName 144.202.11.220
+    User root
+    # Add your SSH key path if needed
+    # IdentityFile ~/.ssh/id_ed25519
+

@@ -1,5 +1,6 @@
 import pg from 'pg';
 import { config } from '../config/index.js';
+import { logger } from '../utils/logger.js';
 
 const { Pool } = pg;
 
@@ -11,7 +12,7 @@ class DatabaseService {
   /** Initialize database connection pool */
   async connect(): Promise<void> {
     if (!config.database.url) {
-      console.warn('⚠️  Database URL not configured. Running without database.');
+      logger.warn('Database URL not configured. Running without database.');
       return;
     }
 
@@ -30,9 +31,9 @@ class DatabaseService {
       client.release();
 
       this.isConnected = true;
-      console.log('✅ Database connected');
+      logger.info('Database connected');
     } catch (error) {
-      console.error('❌ Failed to connect to database:', error);
+      logger.error({ error }, 'Failed to connect to database');
       this.pool = null;
     }
   }
@@ -43,12 +44,12 @@ class DatabaseService {
       await this.pool.end();
       this.pool = null;
       this.isConnected = false;
-      console.log('👋 Database disconnected');
+      logger.info('Database disconnected');
     }
   }
 
   /** Execute a query */
-  async query<T = unknown>(text: string, params?: unknown[]): Promise<pg.QueryResult<T>> {
+  async query<T extends pg.QueryResultRow = pg.QueryResultRow>(text: string, params?: unknown[]): Promise<pg.QueryResult<T>> {
     if (!this.pool || !this.isConnected) {
       throw new Error('Database not connected');
     }
@@ -56,7 +57,7 @@ class DatabaseService {
     try {
       return await this.pool.query<T>(text, params);
     } catch (error) {
-      console.error('❌ Database query error:', error);
+      logger.error({ error, query: text }, 'Database query error');
       throw error;
     }
   }

@@ -1,56 +1,46 @@
-import { Redis } from 'ioredis';
+import { Redis } from '@upstash/redis';
 import { config } from '../config/index.js';
+import { logger } from '../utils/logger.js';
 
-/** Redis cache service for distributed caching */
+/** Redis cache service for distributed caching using Upstash REST API */
 class CacheService {
   private client: Redis | null = null;
   private isConnected = false;
 
   /** Initialize Redis connection */
   async connect(): Promise<void> {
-    if (!config.redis.url) {
-      console.warn('⚠️  Redis URL not configured. Running without cache.');
+    if (!config.redis.restUrl || !config.redis.restToken) {
+      logger.warn('Redis credentials not configured. Running without cache.');
       return;
     }
 
     try {
-      this.client = new Redis(config.redis.url, {
-        maxRetriesPerRequest: 3,
-        enableReadyCheck: true,
-        lazyConnect: true,
-        tls: {
-          rejectUnauthorized: false, // Upstash requires TLS
-        },
+      this.client = new Redis({
+        url: config.redis.restUrl,
+        token: config.redis.restToken,
       });
 
-      await this.client.connect();
-
-      this.client.on('error', (error: Error) => {
-        console.error('❌ Redis connection error:', error);
-        this.isConnected = false;
-      });
-
-      this.client.on('connect', () => {
-        console.log('✅ Redis connected');
+      // Test connection
+      const result = await this.client.ping();
+      if (result === 'PONG') {
         this.isConnected = true;
-      });
-
-      this.isConnected = true;
-      console.log('✅ Redis cache service initialized');
+        logger.info('✅ Redis cache service initialized');
+      } else {
+        throw new Error('Unexpected ping response');
+      }
     } catch (error) {
-      console.error('❌ Failed to connect to Redis:', error);
+      logger.error({ error }, 'Failed to connect to Redis');
       this.client = null;
+      this.isConnected = false;
     }
   }
 
   /** Disconnect from Redis */
   async disconnect(): Promise<void> {
-    if (this.client) {
-      await this.client.quit();
-      this.client = null;
-      this.isConnected = false;
-      console.log('👋 Redis disconnected');
-    }
+    // Upstash REST client doesn't require explicit disconnect
+    this.client = null;
+    this.isConnected = false;
+    logger.info('👋 Redis disconnected');
   }
 
   /** Get value from cache */
@@ -60,13 +50,12 @@ class CacheService {
     }
 
     try {
-      const value = await this.client.get(key);
-      if (!value) {
-        return null;
-      }
-      return JSON.parse(value) as T;
+      // Upstash client automatically deserializes JSON stored as strings
+      // So we fetch as unknown and let TypeScript handle the rest
+      const value = await this.client.get<T>(key);
+      return value;
     } catch (error) {
-      console.error(`❌ Cache get error for key "${key}":`, error);
+      logger.error({ error, key, errorMessage: error instanceof Error ? error.message : 'Unknown error' }, 'Cache get error');
       return null;
     }
   }
@@ -78,14 +67,15 @@ class CacheService {
     }
 
     try {
-      const serialized = JSON.stringify(value);
+      // Upstash client handles JSON serialization automatically
+      // We store the value directly
       if (ttlSeconds) {
-        await this.client.setex(key, ttlSeconds, serialized);
+        await this.client.setex(key, ttlSeconds, value);
       } else {
-        await this.client.set(key, serialized);
+        await this.client.set(key, value);
       }
     } catch (error) {
-      console.error(`❌ Cache set error for key "${key}":`, error);
+      logger.error({ error, key }, 'Cache set error');
     }
   }
 
@@ -98,7 +88,7 @@ class CacheService {
     try {
       await this.client.del(key);
     } catch (error) {
-      console.error(`❌ Cache delete error for key "${key}":`, error);
+      logger.error({ error, key }, 'Cache delete error');
     }
   }
 
@@ -112,7 +102,7 @@ class CacheService {
       const result = await this.client.exists(key);
       return result === 1;
     } catch (error) {
-      console.error(`❌ Cache exists error for key "${key}":`, error);
+      logger.error({ error, key }, 'Cache exists error');
       return false;
     }
   }
@@ -131,7 +121,7 @@ class CacheService {
       }
       return value;
     } catch (error) {
-      console.error(`❌ Cache increment error for key "${key}":`, error);
+      logger.error({ error, key }, 'Cache increment error');
       return 0;
     }
   }
@@ -146,7 +136,7 @@ class CacheService {
       const keys = await this.client.dbsize();
       return { connected: true, keys };
     } catch (error) {
-      console.error('❌ Failed to get cache stats:', error);
+      logger.error({ error }, 'Failed to get cache stats');
       return { connected: false };
     }
   }

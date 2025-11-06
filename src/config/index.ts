@@ -17,6 +17,8 @@ export const config = {
       env.SOLANA_NETWORK === 'mainnet-beta'
         ? env.HELIUS_RPC_URL_MAINNET
         : env.HELIUS_RPC_URL_DEVNET,
+    heliusRpcUrlMainnet: env.HELIUS_RPC_URL_MAINNET,
+    heliusRpcUrlDevnet: env.HELIUS_RPC_URL_DEVNET,
     commitment: 'confirmed' as const,
   },
 
@@ -24,14 +26,20 @@ export const config = {
     mode: env.PAYMENT_MODE,
     facilitatorUrl: env.PAYAI_FACILITATOR_URL,
     publicKey: env.PAYAI_PUBLIC_KEY,
+    recipientAddress: env.PAYMENT_RECIPIENT_ADDRESS,
   },
 
   redis: {
-    url: env.REDIS_URL,
+    restUrl: env.UPSTASH_REDIS_REST_URL,
+    restToken: env.UPSTASH_REDIS_REST_TOKEN,
   },
 
   database: {
     url: env.DATABASE_URL,
+  },
+
+  security: {
+    corsOrigins: env.CORS_ORIGINS,
   },
 
   rateLimit: {

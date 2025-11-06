@@ -29,14 +29,26 @@ const envSchema = z.object({
     .optional()
     .or(z.literal(''))
     .transform((val) => (val === '' ? undefined : val)),
+  PAYMENT_RECIPIENT_ADDRESS: z
+    .string()
+    .min(32)
+    .max(64)
+    .optional()
+    .or(z.literal(''))
+    .transform((val) => (val === '' ? undefined : val)),
 
-  // Redis
-  REDIS_URL: z.string().url().optional(),
+  // Redis (Upstash REST API)
+  UPSTASH_REDIS_REST_URL: z.string().url().optional(),
+  UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
 
   // PostgreSQL
   DATABASE_URL: z.string().url().optional(),
 
   // Security & Rate Limiting
+  CORS_ORIGINS: z
+    .string()
+    .optional()
+    .transform((val) => (val ? val.split(',').map((s) => s.trim()) : undefined)),
   RATE_LIMIT_WINDOW_MS: z.string().transform(Number).default('60000'),
   RATE_LIMIT_MAX_REQUESTS_BEFORE_PAYMENT: z.string().transform(Number).default('10'),
   RATE_LIMIT_MAX_REQUESTS_AFTER_PAYMENT: z.string().transform(Number).default('100'),

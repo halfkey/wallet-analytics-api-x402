@@ -27,6 +27,19 @@ lerna-debug.log*
 coverage/
 .vitest/
 
+# Ad-hoc test files (use tests/ directory for real tests)
+test-*.ts
+clear-cache-and-test.ts
+
+# Load testing results
+load-test-results-*.json
+load-test-realistic-*.json
+stress-test-*.json
+benchmark-results-*.json
+k6-summary.json
+performance-monitor.jsonl
+nonce-pool.json
+
 # IDE
 .vscode/
 .idea/

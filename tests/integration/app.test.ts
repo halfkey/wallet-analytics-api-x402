@@ -35,7 +35,8 @@ describe('Fastify App Integration', () => {
       expect(body.version).toBe('1.0.0');
       expect(body.paymentProtocol).toBe('x402');
       expect(body.endpoints).toBeDefined();
-      expect(body.endpoints.health).toBe('GET /health');
+      expect(body.freeEndpoints).toBeDefined();
+      expect(body.freeEndpoints.health).toBe('GET /health');
     });
   });
 

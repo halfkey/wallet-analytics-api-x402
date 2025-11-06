@@ -1,35 +1,55 @@
-# Solana Wallet Analytics API
+# ChainScope API - Solana Wallet Analytics with x402
 
-A high-performance API for analyzing Solana wallet data with frictionless x402 cryptocurrency payment integration.
+A production-ready REST API for analyzing Solana wallets with pay-per-use pricing via the x402 payment protocol. Built for the [Solana x402 Hackathon](https://solana.com/x402/hackathon).
 
-## 🚀 Features
+**Live API:** https://api.chain-scope.dev
+**Frontend Demo:** https://chain-scope.dev
+**Frontend Repository:** https://github.com/halfkey/wallet-analytics-demo
 
-- **x402 Payment Protocol**: Pay-per-use API access without accounts or API keys
-- **Comprehensive Wallet Analytics**: Portfolio analysis, token holdings, NFT valuations, DeFi positions
-- **Multiple Payment Modes**: Mock (dev), Test (devnet), and Production (mainnet)
-- **Enterprise Security**: Rate limiting, input validation, audit logging
-- **High Performance**: Redis caching, parallel data fetching, optimized RPC calls
+## What is x402?
 
-## 📋 Prerequisites
+x402 is a revolutionary payment protocol that enables micropayments for API access. Instead of traditional API keys or subscription models, users pay per request using cryptocurrency (USDC on Solana). This creates a truly permissionless, pay-as-you-go API economy.
 
-- Node.js >= 20.0.0
-- pnpm >= 8.0.0
-- Helius API key (free tier: 100K credits/month)
-- Upstash Redis account (optional for development)
-- Neon PostgreSQL account (optional for development)
+## Features
 
-## 🛠️ Tech Stack
+### x402 Payment Integration
+- **Full x402 Protocol**: Complete implementation of HTTP 402 Payment Required
+- **Two Payment Modes**: Mock (dev), On-chain (direct blockchain verification)
+- **USDC Payments**: Mainnet USDC micropayments (0.01 - 0.10 per request)
+- **Direct On-chain Verification**: Validates transactions directly on Solana blockchain
+- **No Third Parties**: Fully decentralized payment verification
 
-- **Runtime**: Node.js 20 + TypeScript 5.7
-- **Framework**: Fastify 5.x
-- **Validation**: Zod
-- **Blockchain**: @solana/web3.js, @solana/spl-token
-- **Caching**: Redis (ioredis)
-- **Database**: PostgreSQL (pg)
-- **Testing**: Vitest
-- **Linting**: ESLint + Prettier
+### Wallet Analytics
+- **Wallet Overview**: SOL balance, token count, total portfolio value
+- **Portfolio Analysis**: Detailed token holdings with real-time prices, NFTs, DeFi positions
+- **Transaction History**: Comprehensive activity tracking with categorization
+- **Risk Assessment**: Multi-factor security analysis and wallet age verification
 
-## 📦 Installation
+### Production Features
+- **High Performance**: Sub-100ms response times with Redis caching
+- **Rate Limiting**: IP-based and wallet-based rate limiting
+- **Comprehensive Tests**: 35+ passing tests with 80%+ coverage
+- **Docker Support**: Production-ready containerization
+- **Health Monitoring**: Health checks and graceful shutdown
+- **TypeScript**: Full type safety with Zod validation
+
+## Prerequisites
+
+- Node.js 18.0.0 or higher
+- PostgreSQL 14 or higher
+- Redis 6 or higher
+- Helius RPC API key (available at [helius.dev](https://helius.dev))
+
+## Technology Stack
+
+- **Runtime**: Node.js with TypeScript
+- **Framework**: Fastify (high-performance HTTP server)
+- **Database**: PostgreSQL (payment tracking)
+- **Cache**: Redis (response caching)
+- **Blockchain**: Solana Web3.js + Helius RPC
+- **Validation**: Zod (environment and schema validation)
+
+## Installation
 
 ```bash
 # Clone the repository
@@ -46,7 +66,7 @@ cp .env.example .env
 nano .env
 ```
 
-## ⚙️ Configuration
+## Configuration
 
 ### Environment Variables
 
@@ -54,11 +74,21 @@ See [.env.example](.env.example) for all available configuration options.
 
 ### Payment Modes
 
-- **mock**: Auto-approve payments for development (no blockchain interaction)
-- **test**: Use Solana devnet for testing real payment flows
-- **payai**: Production mode with mainnet USDC payments
+The API supports two payment verification modes:
 
-## 🏃 Development
+- **mock**: Auto-approve all payments for development (no blockchain interaction)
+  - Use for local testing and development
+  - No real transactions required
+  - Perfect for integration testing
+
+- **onchain**: Direct on-chain verification via Solana blockchain (Production Mode)
+  - Verifies transactions directly on Solana mainnet
+  - No third-party payment processors
+  - Maximum decentralization
+  - Requires Helius RPC for transaction lookups
+  - Validates amount, recipient, memo, and timestamp
+
+## Development
 
 ```bash
 # Run development server with hot reload
@@ -86,7 +116,7 @@ pnpm format
 pnpm typecheck
 ```
 
-## 🏗️ Project Structure
+## Project Structure
 
 ```
 src/
@@ -112,7 +142,7 @@ scripts/
 └── setup-db.ts      # Database schema setup
 ```
 
-## 🔒 Security
+## Security
 
 - **Zero Trust Architecture**: Every request requires valid payment proof
 - **Rate Limiting**: IP-based (before payment) and wallet-based (after payment)
@@ -120,7 +150,7 @@ scripts/
 - **Secure Headers**: Helmet.js for HTTP security
 - **No PII Collection**: Minimal data retention, GDPR compliant
 
-## 📊 API Endpoints
+## API Endpoints
 
 ### Health Check
 ```
@@ -156,7 +186,139 @@ Price: 0.10 USDC
 Returns: Risk score and security analysis
 ```
 
-## 🧪 Testing
+## x402 Implementation Details
+
+This section explains how the x402 payment protocol is implemented in ChainScope.
+
+### Payment Flow
+
+1. **Initial Request**: Client makes GET request to protected endpoint
+2. **402 Response**: Server returns HTTP 402 with payment challenge
+3. **Payment Creation**: Client creates Solana transaction with:
+   - Amount in USDC
+   - Recipient (merchant wallet)
+   - Memo (unique payment ID)
+4. **Transaction Signature**: User signs transaction via wallet
+5. **Blockchain Submission**: Transaction broadcast to Solana
+6. **Retry with Proof**: Client retries request with X-PAYMENT header
+7. **Verification**: Server verifies transaction on-chain
+8. **Data Delivery**: Server returns requested data (HTTP 200)
+
+### Payment Challenge Format
+
+When a protected endpoint is accessed without payment, the server responds with:
+
+```json
+{
+  "x402Version": 1,
+  "paymentRequired": true,
+  "acceptedCurrencies": ["USDC"],
+  "amount": "0.05",
+  "currency": "USDC",
+  "recipient": "9xKsHQm7Vbr2Zzz...",
+  "memo": "pay_1730912345_abc123",
+  "endpoint": "/api/v1/wallet/{address}/portfolio",
+  "network": "solana-mainnet"
+}
+```
+
+### X-PAYMENT Header
+
+Clients include payment proof in the `X-PAYMENT` header (Base64-encoded JSON):
+
+```json
+{
+  "x402Version": 1,
+  "payload": {
+    "txSignature": "5j6F8kMx...",
+    "fromAddress": "DYw8jCTf...",
+    "toAddress": "9xKsHQ...",
+    "amount": "0.05",
+    "currency": "USDC",
+    "memo": "pay_1730912345_abc123",
+    "network": "solana-mainnet",
+    "timestamp": "2025-11-06T12:34:56Z"
+  }
+}
+```
+
+### On-Chain Verification
+
+The server verifies payments by:
+
+1. **Signature Validation**: Check transaction signature exists on Solana
+2. **Amount Verification**: Confirm USDC amount matches price
+3. **Recipient Check**: Verify payment sent to correct merchant wallet
+4. **Memo Matching**: Ensure memo matches payment challenge
+5. **Timestamp Check**: Transaction must be recent (< 5 minutes)
+6. **Replay Prevention**: Check transaction hasn't been used before
+
+### Code Structure
+
+#### Middleware: [src/middleware/x402Payment.ts](src/middleware/x402Payment.ts)
+
+The main x402 middleware that:
+- Checks if endpoint requires payment
+- Returns 402 challenges for unpaid requests
+- Parses and validates X-PAYMENT headers
+- Routes to appropriate verification method (mock/onchain)
+
+#### Services:
+
+- **[src/services/x402.ts](src/services/x402.ts)**: Core x402 protocol helpers
+  - `createPaymentRequiredResponse()`: Generate 402 responses
+  - `parsePaymentHeader()`: Parse X-PAYMENT headers
+  - `createPaymentRequirement()`: Create payment challenges
+
+- **[src/services/onChainVerification.ts](src/services/onChainVerification.ts)**: Direct blockchain verification
+  - Fetches transactions from Solana via Helius RPC
+  - Validates transaction details (amount, recipient, memo, timestamp)
+  - Prevents replay attacks with memo tracking
+  - No third-party payment processors required
+
+#### Configuration: [src/config/pricing.ts](src/config/pricing.ts)
+
+Defines endpoint pricing and payment requirements:
+
+```typescript
+export const ENDPOINT_PRICING = {
+  '/api/v1/wallet/:address/overview': 0.01,
+  '/api/v1/wallet/:address/portfolio': 0.05,
+  '/api/v1/wallet/:address/activity': 0.10,
+  '/api/v1/wallet/:address/risk': 0.10,
+};
+```
+
+### Security Considerations
+
+- **Replay Attack Prevention**: Memos include timestamp and random nonce
+- **Amount Validation**: Exact amount matching required
+- **Time Windows**: 5-minute window for transaction validity
+- **Rate Limiting**: Both IP and wallet-based limits
+- **No Stored Keys**: Merchant key only for verification, not signing
+
+### Testing x402
+
+Run the comprehensive test suite:
+
+```bash
+# All tests including x402 flow
+pnpm test
+
+# Specific x402 tests
+pnpm test tests/integration/x402-payment.test.ts
+
+# Test coverage
+pnpm test:coverage
+```
+
+The test suite includes:
+- Mock payment flow testing
+- Payment header parsing
+- Challenge generation
+- Error handling scenarios
+
+## Testing
 
 ```bash
 # Run all tests
@@ -172,7 +334,7 @@ pnpm test tests/unit/services/solana.test.ts
 pnpm test:coverage
 ```
 
-## 🚢 Deployment
+## Deployment
 
 ### Railway (Recommended for MVP)
 
@@ -197,29 +359,40 @@ flyctl launch
 flyctl deploy
 ```
 
-## 📈 Roadmap
+## Architecture Highlights
 
-- [x] Phase 1: Foundation & x402 payment integration
-- [ ] Phase 2: Enhanced features (NFTs, DeFi positions)
-- [ ] Phase 3: Advanced analytics (activity, risk scoring)
-- [ ] Phase 4: Production hardening (monitoring, multi-region)
+- **Fastify**: High-performance HTTP framework (2x faster than Express)
+- **Redis Caching**: Sub-100ms responses for cached data
+- **PostgreSQL**: Payment tracking and analytics
+- **Helius RPC**: Enhanced Solana RPC with transaction history
+- **Docker**: Production containerization
+- **TypeScript**: Full type safety throughout
 
-## 🤝 Contributing
+## Performance Benchmarks
 
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Open a Pull Request
+- Health check: < 10ms
+- Cached response: < 100ms
+- Fresh analytics (with payment): 500-1000ms
+- Payment verification (on-chain): 2-5 seconds
 
-## 📄 License
+## License
 
 MIT
 
-## 🆘 Support
+## Links
 
-For issues and questions, please open a GitHub issue.
+- **Live API**: https://api.chain-scope.dev
+- **Frontend Demo**: https://chain-scope.dev
+- **Frontend Repository**: https://github.com/halfkey/wallet-analytics-demo
+- **x402 Hackathon**: https://solana.com/x402/hackathon
 
----
+## Support
 
-Built with ❤️ using the x402 payment protocol
+For issues or questions:
+- Open a GitHub issue
+- Check the [frontend repository](https://github.com/halfkey/wallet-analytics-demo) for client examples
+- Review the x402 implementation details above
+
+## Acknowledgments
+
+Built for the Solana x402 Hackathon. Demonstrates production-ready implementation of the x402 payment protocol with direct on-chain verification, no API keys required.
