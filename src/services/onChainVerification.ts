@@ -74,29 +74,49 @@ export async function verifyOnChainPayment(
     // Get Solana connection
     const connection = getConnection();
 
-    // Fetch transaction from blockchain
-    let transaction: ParsedTransactionWithMeta | null;
-    try {
-      // Try to fetch the transaction - signature is already base58
-      transaction = await connection.getParsedTransaction(
-        decodedSignature,
-        {
-          maxSupportedTransactionVersion: 0,
-          commitment: 'confirmed',
+    // Fetch transaction from blockchain with retries
+    // Solana nodes need time to index transactions, so we retry a few times
+    let transaction: ParsedTransactionWithMeta | null = null;
+    const maxRetries = 5;
+    const retryDelay = 1000; // 1 second between retries
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        // Try to fetch the transaction - signature is already base58
+        transaction = await connection.getParsedTransaction(
+          decodedSignature,
+          {
+            maxSupportedTransactionVersion: 0,
+            commitment: 'confirmed',
+          }
+        );
+
+        if (transaction) {
+          break; // Transaction found, exit retry loop
         }
-      );
-    } catch (error: any) {
-      console.error('Error fetching transaction:', error);
-      return {
-        isValid: false,
-        reason: `Failed to fetch transaction: ${error.message}`,
-      };
+
+        // If not found and not last attempt, wait before retrying
+        if (attempt < maxRetries - 1) {
+          await new Promise(resolve => setTimeout(resolve, retryDelay));
+        }
+      } catch (error: any) {
+        console.error(`Error fetching transaction (attempt ${attempt + 1}/${maxRetries}):`, error);
+        // If last attempt, return error
+        if (attempt === maxRetries - 1) {
+          return {
+            isValid: false,
+            reason: `Failed to fetch transaction after ${maxRetries} attempts: ${error.message}`,
+          };
+        }
+        // Otherwise wait and retry
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+      }
     }
 
     if (!transaction) {
       return {
         isValid: false,
-        reason: 'Transaction not found on blockchain',
+        reason: `Transaction not found on blockchain after ${maxRetries} attempts (${maxRetries} seconds)`,
       };
     }
 
