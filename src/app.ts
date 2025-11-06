@@ -58,6 +58,10 @@ export async function createApp(): Promise<FastifyInstance> {
     cache: 10000, // Cache size for storing rate limit data
     allowList: ['127.0.0.1'], // Allow localhost in development
     skipOnError: false, // Don't skip rate limiting on errors
+    skip: (request) => {
+      // Skip rate limiting for RPC proxy (it's a utility endpoint for paid features)
+      return request.url === '/api/v1/rpc';
+    },
     keyGenerator: (request) => {
       // Use IP address for rate limiting
       return request.ip || 'unknown';
