@@ -170,7 +170,7 @@ export async function createApp(): Promise<FastifyInstance> {
         'getAccountInfo',
         'getLatestBlockhash',
         'sendTransaction',
-        'confirmTransaction',
+        'getSignatureStatuses',
       ];
 
       if (!allowedMethods.includes(body.method)) {
